@@ -63,17 +63,6 @@ int main() {
 		memcpy(shmPtr, &sdata, sizeof(SharedData));
 	};
 
-    //detach   
-	if (shmdt (shmPtr) < 0) {
-		perror ("just can't let go\n");
-		exit (1);
-	}
-
-	if (shmctl (shmId, IPC_RMID, 0) < 0) {
-		perror ("can't deallocate\n");
-		exit(1);
-	}
-
 	return 0; 
 }
 
