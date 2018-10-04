@@ -6,6 +6,9 @@
 #include <sys/shm.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+
+void sigHandler(int);
 
 /*
  * Reader Program
@@ -16,18 +19,20 @@
  *
  */
 
-int main() {
-    // read new string from shared memory
-    // display string on screen
-	key_t key;
-	int shmId;
-	char *shmPtr;
-	typedef struct {
+key_t key;
+int shmId;
+char *shmPtr;
+typedef struct {
 		int turn;
 		char message[1024];
 	} SharedData;
+
+int main() {
+    // read new string from shared memory
+    // display string on screen
 	SharedData sdata;
 	sdata.turn = 0;
+	signal(SIGINT, sigHandler);
 
     //generate a unique key 
 	key = ftok("shmkey",65); 
@@ -57,6 +62,11 @@ int main() {
 		memcpy(shmPtr, &sdata, sizeof(SharedData));
 	};
 
+	return 0; 
+}
+
+void sigHandler(int sigNum) {
+	printf(" received. That's it, I'm shutting you down...\n");
 	// detach from memory
 	if (shmdt (shmPtr) < 0) {
 		perror ("just can't let go\n");
@@ -68,6 +78,5 @@ int main() {
 		perror ("can't deallocate\n");
 		exit(1);
 	}
-
-	return 0; 
+	exit(0);
 }
