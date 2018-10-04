@@ -5,9 +5,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <string.h>
-#include <stdbool.h>
-#include <sys/wait.h>
-#include <sys/resource.h>
+#include <unistd.h>
 
 /*
  * Writer Program
@@ -17,10 +15,6 @@
  * @version October 2018
  *
  */
-#define MAX 4096
-
-// number processes performing read in crit section
-int turn;
 
 int main() {
     // creates shared memory segment
@@ -30,13 +24,14 @@ int main() {
 	int shmId;
 	char *shmPtr;
 	key_t key;
-	//char *message[MAX];
-	struct Sharedmem {
-		bool turn;
+	// number processes performing read in crit section
+	typedef struct {
+		int turn;
 		char message[1024];
-	};
-	struct Sharedmem shared;
-	shared.turn = false;
+	} SharedData;
+	SharedData sdata;
+	
+	sdata.turn = 0;
 
     //generate a unique key 
 	key = ftok("shmkey",65); 
@@ -53,29 +48,18 @@ int main() {
 
 	while(1) {
 		// request the critical section
-		printf("shared: %d\n", shared.turn);
-		while (shared.turn == 1) {
+		while (sdata.turn) {
 			// not time for the writer, check if token is changed.
-			memcpy(&shared, shmPtr, sizeof(shared));
+			memcpy(&sdata, shmPtr, sizeof(SharedData));
 		}
 		// enter critical section
-		shared.turn = true;
 		printf("Enter a message: \n" ); 
-		scanf("%s", shared.message);
+		scanf("%s", sdata.message);
 		// leave critical section
-		printf("shared: %d\n", shared.turn);
-		printf("Message written to memory: %s\n", shared.message);
-		sleep(1);
+		printf("Message written to memory: %s\n", sdata.message);
+		sdata.turn = 1;
+		memcpy(shmPtr, &sdata, sizeof(SharedData));
 	};
-
-	//flag for knowing if string was read
-	//flag = (char*) shmat(shmId,(void*)0,0);
-
-
-	// printf("Enter a message: \n" ); 
-	// scanf("%s", message);
-	// printf("Message written to memory: %s\n", message);
-
 
     //detach   
 	if (shmdt (shmPtr) < 0) {
