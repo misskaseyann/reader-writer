@@ -6,6 +6,9 @@
 #include <sys/shm.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+
+void sigHandler(int);
 
 /*
  * Writer Program
@@ -16,22 +19,21 @@
  *
  */
 
+key_t key;
+int shmId;
+char *shmPtr;
+typedef struct {
+		int turn;
+		char message[1024];
+	} SharedData;
+
 int main() {
     // creates shared memory segment
     // repeatedly accepts an arbitrary user input string from terminal
     // writes string into shared memory
-
-	int shmId;
-	char *shmPtr;
-	key_t key;
-	// number processes performing read in crit section
-	typedef struct {
-		int turn;
-		char message[1024];
-	} SharedData;
 	SharedData sdata;
-	
 	sdata.turn = 0;
+	signal(SIGINT, sigHandler);
 
     //generate a unique key 
 	key = ftok("shmkey",65); 
@@ -73,4 +75,20 @@ int main() {
 	}
 
 	return 0; 
+}
+
+void sigHandler(int sigNum) {
+	printf(" received. That's it, I'm shutting you down...\n");
+	// detach from memory
+	if (shmdt (shmPtr) < 0) {
+		perror ("just can't let go\n");
+		exit (1);
+	}
+
+	// destroy shared memory
+	if (shmctl (shmId, IPC_RMID, 0) < 0) {
+		perror ("can't deallocate\n");
+		exit(1);
+	}
+	exit(0);
 }
