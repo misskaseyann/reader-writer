@@ -8,8 +8,6 @@
 #include <unistd.h>
 #include <signal.h>
 
-void sigHandler(int);
-
 /*
  * Writer Program
  * Lab 5
@@ -18,6 +16,8 @@ void sigHandler(int);
  * @version October 2018
  *
  */
+
+void sigHandler(int);
 
 key_t key;
 int shmId;
@@ -28,9 +28,6 @@ typedef struct {
 	} SharedData;
 
 int main() {
-    // creates shared memory segment
-    // repeatedly accepts an arbitrary user input string from terminal
-    // writes string into shared memory
 	SharedData sdata;
 	sdata.turn = 0;
 	signal(SIGINT, sigHandler);
@@ -48,7 +45,7 @@ int main() {
 		exit(1);
 	}
 
-	while(1) {
+	while(strcmp(sdata.message, "exit") != 0) {
 		// request the critical section
 		while (sdata.turn) {
 			// not time for the writer, check if token is changed.
@@ -63,11 +60,14 @@ int main() {
 		memcpy(shmPtr, &sdata, sizeof(SharedData));
 	};
 
+	kill(getpid(),SIGINT);
+
 	return 0; 
 }
 
+/* Shut down process */
 void sigHandler(int sigNum) {
-	printf(" received. That's it, I'm shutting you down...\n");
+	printf("That's it, I'm shutting you down...\n");
 	// detach from memory
 	if (shmdt (shmPtr) < 0) {
 		perror ("just can't let go\n");
